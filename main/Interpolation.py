@@ -1,5 +1,31 @@
 from math import exp, log
-import LinearAlgebra
+
+def SolveTriDiagonal(a, b, c, r):
+   """Solve a tri-diagonal system of equations with a,b,c vectors of the diagonal elements
+      b lies on the diagonal, a is below and c above."""
+   n = len(b)
+   result = [0.0 for i in range(n)]
+   temp = [0.0 for i in range(n)]
+   btemp = b[0]
+   result[0] = r[0] / btemp
+
+   # Forward Substitution
+   for i in range(1, n):
+       temp[i] = c[i - 1] / btemp
+       btemp = b[i] - a[i] * temp[i]
+       if (btemp == 0.0):
+           print(i, "Error in tridiagonal solver")
+           return i, "Error in tridiagonal solver"
+
+       result[i] = (r[i] - a[i] * result[i - 1]) / btemp
+
+   # Backward substitution
+   i = n - 2
+   while i >= 0:
+       result[i] -= temp[i + 1] * result[i + 1];
+       i -= 1
+
+   return result
 
 
 def HermiteMi(t, ti, tiplus):
@@ -210,7 +236,6 @@ def LeastSquaresQuadraticInterpolation(point, points, values):
    n = len(points)
    A = [[1.0 * points[i] ** 2, 1.0 * points[i], 1.0] for i in range(n)]
 
-   [a, b, c] = LinearAlgebra.LeastSquaresCholesky(A, values)
    value = a * point ** 2 + b * point + c
 
    return value
@@ -221,7 +246,6 @@ def LeastSquaresCubicInterpolation(point, points, values):
    n = len(points)
    A = [[1.0 * points[i] ** 3, 1.0 * points[i] ** 2, 1.0 * points[i], 1.0] for i in range(n)]
 
-   [a, b, c, d] = LinearAlgebra.LeastSquaresCholesky(A, values)
    value = a * point ** 3 + b * point ** 2 + c * point + d
 
    return value
@@ -237,8 +261,6 @@ def LeastSquaresPolynomialInterpolation(point, points, values, order):
        order = n - 1
 
    A = [[1.0 * points[i] ** j for j in range(order + 1)] for i in range(n)]
-   coeff = LinearAlgebra.LeastSquaresCholesky(A, values)
-
    for i in range(order + 1):
        value += coeff[i] * point ** i
 
