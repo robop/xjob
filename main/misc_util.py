@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy.special import ndtri as norminv
+from math import exp, sqrt, log
 
 """Creates standard normal random numbers"""
 def lhs(x):
@@ -22,3 +23,18 @@ def cholesky(corr,u):
     u_corr = np.dot( L, u )  # gör slumptalen korrelerade enligt matris
 
     return u_corr
+
+"""Creates a random path """
+def random_path(S0,x,rate,vol,time):
+
+    St = S0
+    path = [St]
+    n = len(x)-1
+    det = rate - 0.5*vol*vol
+
+    for i in range(n):
+        dt = time[i+1] - time[i]
+        St = St * exp(det*dt + vol*sqrt(dt)*x[i])
+        path.append( St )
+
+    return path
