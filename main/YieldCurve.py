@@ -4,13 +4,13 @@ import Interpolation
 
 class Curve:
     def __init__(self, \
-                 dates, \
-                 rates, \
-                 dayCount="Act/365", \
-                 interpolation="Hermite", \
-                 extrapolation="Flat", \
-                 refDate=DateUtils.DateToday() \
-                 ):
+                 dates: object, \
+                 rates: object, \
+                 dayCount: object = "Act/365", \
+                 interpolation: object = "Hermite", \
+                 extrapolation: object = "Flat", \
+                 refDate: object = DateUtils.DateToday() \
+                 ) -> object:
         self.dates = dates
         self.points = []
         self.rates = rates
