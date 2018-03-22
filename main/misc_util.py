@@ -25,15 +25,35 @@ def cholesky(corr,u):
     return u_corr
 
 """Creates a random path """
-def random_path(S0,x,rate,vol,time):
+def randomPath(S0,x,rate,vol,deltaTime):
 
     St = S0
     path = [St]
-    n = len(x)-1
-    det = rate - 0.5*vol*vol
-
+    n = len(x)
     for i in range(n):
-        dt = time[i+1] - time[i]
+        det = rate[i] - 0.5 * vol * vol
+        # if i == 0:
+        #     dt = time[0]
+        # else:
+        #     dt = time[i] - time[i-1]
+        #print(n,i,time[i], time[i-1],dt)
+        St = St * exp(det*deltaTime + vol*sqrt(deltaTime)*x[i])
+        path.append( St )
+
+    return path
+
+def randomPath2(S0,x,rate,vol,time):
+
+    St = S0
+    path = [St]
+    n = len(x)
+    for i in range(n):
+        det = rate[i] - 0.5 * vol * vol
+        if i == 0:
+            dt = time[0]
+        else:
+            dt = time[i] - time[i-1]
+        #print(n,i,time[i], time[i-1],dt)
         St = St * exp(det*dt + vol*sqrt(dt)*x[i])
         path.append( St )
 

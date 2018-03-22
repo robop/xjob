@@ -46,7 +46,7 @@ def DateStringFromDateObject(dateIn):
     return str(dateIn)
 
 
-def DateToday():
+def DateToday() -> object:
     return date.today()
 
 

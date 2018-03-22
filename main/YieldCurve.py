@@ -82,9 +82,11 @@ class Curve:
         for date in self.dates:
             timePoint = DateUtils.GetPeriodLength(self.refDate, date, self.dayCount)[1]
             self.points.append(timePoint)
+        #print("POINTS",self.points,'\n')
 
     def RateFromDate(self, date):
         T = DateUtils.GetPeriodLength(self.refDate, date, self.dayCount)[1]
+        #print(T)
         return self.RateFromTime(T)
 
     def RateFromTime(self, point):
@@ -186,7 +188,7 @@ class Curve:
 
         return forw
 
-    def DiscountFactorFromDates(self, startDate, endDate, rateType):
+    def DiscountFactorFromDates(self, startDate, endDate, rateType = "Continuous"):
         startTime = DateUtils.DateDifferenceInYears(self.refDate, startDate)
         endTime = DateUtils.DateDifferenceInYears(self.refDate, endDate)
         return self.DiscountFactorFromTimes(startTime, endTime, rateType)

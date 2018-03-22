@@ -138,26 +138,30 @@ def LinearInterpolation(point, points, values, extrapolationBack="Flat", extrapo
    i = FindPosition(point, points)
    if i == -1:
        if extrapolationBack == "Flat":
+           #print("flat")
            return values[0]
 
        elif extrapolationBack == "Linear":
+           #print("linear")
            coeff = (values[1] - values[0]) / (points[1] - points[0])
            value = values[0] + (point - points[0]) * coeff
            return value
 
    elif i == len(values):
        if extrapolationForw == "Flat":
+           #print( "extra" )
            return values[len(values) - 1]
 
        elif extrapolationForw == "Linear":
            n = len(values) - 1
+           #print("linear")
            coeff = (values[n] - values[n - 1]) / (points[n] - points[n - 1])
            value = values[n] + (point - points[n]) * coeff
            return value
 
    coeff = (values[i + 1] - values[i]) / (points[i + 1] - points[i])
    value = values[i] + (point - points[i]) * coeff
-
+   #print("punkt", point, "mellan", points[i], points[i+1], "values", values[i], values[i+1], "värde", value)
    return value
 
 

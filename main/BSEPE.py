@@ -101,7 +101,7 @@ def TestEPE( ):
             """ For each time point, estimate value of contract """
             t = tVec[ j ]
             St = path[ j ]
-            Vt = CallOption( St, K, r, d, vol, t, T )
+            Vt = StructuredSwap.PresentValue(...)#CallOption( St, K, r, d, vol, t, T )
             EPE[ j ] += max( Vt, 0.0 )
 
     EPE = [ E / sim for E in EPE ]  # Expected Positive Exposure (= EE Since Vt >= 0)
