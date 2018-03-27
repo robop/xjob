@@ -2,7 +2,7 @@ import DateUtils
 import math
 import holidays
 
-class CCS:
+class frn:
 #""" Need to decide how to manage past fixings """
     def __init__(self,
                 nominal,
@@ -11,6 +11,7 @@ class CCS:
                 spread,
                 frequency,
                 currency,
+               # koProb,
                 dayCount = "Act/365",
                 adjMethod = "Mod. Following",
                 isStub = True):
@@ -22,6 +23,7 @@ class CCS:
         self.dayCount = dayCount
         self.adjMethod = adjMethod
         self.currency = currency
+       # self.koProb = koProb
         self.isStub = isStub
 
     #""" Additional structure to store prices for different dates: Makes it faster and easier to run bootstrap """
@@ -33,7 +35,7 @@ class CCS:
         elif self.currency == "SEK":
             self.holidayArray = holidays.Sweden()
         elif self.currency == "JPY":
-            self.holidayArray = holidays.Japan( )
+            self.holidayArray = holidays.Japan()
 
         self.cfDates = DateUtils.GenerateCashFlowDates(startDate, endDate, None, frequency, adjMethod, isStub, self.holidayArray)
         self.pv = 0.0
@@ -49,52 +51,42 @@ class CCS:
 
         self.prices[date] = price
 
+    def Initial(self, initial=None):
+        if not initial:
+            return self.nominal
+
     def PresentValue(self,
                 discountCurve,
                 forwardCurve,
-                fxRate,
-                discountCurveFix,
-                fixRate,
-                refDate=DateUtils.DateToday()):
+                refDate=DateUtils.DateToday(),
+                endDate = None):
         self.pv = 0.0
         self.cfs = []
         self.cfPVs = []
         self.cfDays = []
         self.dfs = []
-        self.pvFix = 0.0
-        self.cfsFix = []
-        self.cfPVsFix = [ ]
-        self.cfDaysFix = [ ]
-        self.dfsFix = [ ]
+        tempCFDates = self.cfDates
+
+        if endDate:
+            # Ta bort kf datum som ligger tidigare än refDate
+            while endDate > tempCFDates[ 1 ][ -1 ]:
+                tempCFDates = (tempCFDates[ 0 ][ 0:-2 ], tempCFDates[ 1 ][ 0:-2 ])
 
         discountCurve.CurveDate(refDate)
         forwardCurve.CurveDate(refDate)
-        discountCurveFix.CurveDate(refDate)
 
-        for i in range(len(self.cfDates[0])):
-            startDate = self.cfDates[0][i]
-            endDate = self.cfDates[1][i]
+        for i in range(len(tempCFDates[0])):
+            startDate = tempCFDates[0][i]
+            endDate = tempCFDates[1][i]
+
             if DateUtils.DateDifferenceInDays(refDate, endDate) > 0:
                 dt = DateUtils.GetPeriodLength(startDate, endDate, self.dayCount)
                 forward = forwardCurve.ForwardRateFromDates(startDate, endDate, self.dayCount)
                 df = discountCurve.DiscountFromDate(endDate)
-                t = DateUtils.DateDifferenceInYears(refDate, endDate)
                 cf = self.nominal * (forward + self.spread) * dt[1]
-
-
-
-                #Samma som ovan fast för fix ben
-                dfFix = discountCurveFix.DiscountFromDate(endDate)
-                cfFix = self.nominal * fixRate * dt[1]
-
-                #print( "forward:", 100*forward, "dt:", dt[ 1 ], "dfRörlig", df, "cfRörlig", cf ,t)
 
                 self.cfs.append(cf)
                 self.cfPVs.append(cf * df)
-
-                #Samma som ovan fast för fix ben
-                self.cfsFix.append(cfFix)
-                self.cfPVsFix.append(cfFix * dfFix)
 
             else:
                 cf = 0.0
@@ -103,36 +95,17 @@ class CCS:
                 self.cfs.append(cf)
                 self.cfPVs.append(cf)
 
-                # Samma som ovan fast för fix ben
-                cfFix = 0.0
-                dfFix = 1.0
-                dt = [ 0.0, 0.0 ]
-                self.cfs.append( cfFix )
-                self.cfPVs.append( cfFix * dfFix )
-
             self.pv += cf * df
-            self.pvFix += cfFix * dfFix
 
             self.dfs.append(df)
             self.cfDays.append(dt[0])
 
-            self.dfsFix.append(dfFix)
 
         #Nu görs grejer på slutet, själva summeringen av ben
-        # rate = discountCurve.DiscountFromDate(self.endDate)
-        # t = DateUtils.DateDifferenceInYears(refDate, self.endDate)
-        # df = math.exp(-rate * t)
+        df = discountCurve.DiscountFromDate(tempCFDates[1][-1])
 
-        # dfFix = discountCurveFix.DiscountFromDate(self.endDate)
+        self.cfs[-1] += self.nominal
+        self.cfPVs[-1] += self.nominal * df
+        self.pv += self.nominal * df
 
-        #self.cfs[-1] += self.nominal
-        #self.cfPVs[-1] += self.nominal * df
-        #self.pv += self.nominal * df
-
-        #self.cfsFix[ -1 ] += self.nominal
-        #self.cfPVsFix[ -1 ] += self.nominal * dfFix
-        #self.pvFix += self.nominal * dfFix
-
-        self.pvTotal = self.pvFix - fxRate * self.pv
-
-        return self.pvTotal
+        return self.pv

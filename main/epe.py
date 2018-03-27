@@ -1,13 +1,19 @@
+# -*- coding: utf-8 -*-
 import misc_util
 import DateUtils
 import matplotlib.pyplot as plt
 import numpy as np
+import FRN
 
-def epeStruct(swap, discCurve, valFreq, volatility, simulationTimes):
+def epeStruct(swap, discCurve, discCurveFRN, forwardCurve, spread, valFreq, volIndex, volFX, simulationTimes, correlationMatrix):
     # swap = structSwap objekt, discCurve = diskontering objekt, valFreq = [år, mån, dagar]
+    fxJPYUSD = 0.00943
+    fxNominal = swap.nominal / fxJPYUSD
+    frn = FRN.frn(fxNominal, swap.startDate, swap.endDate, spread, swap.frequency, swap.currency)
 
     loopDate = swap.startDate
     pvVector = []
+    pvVectorLibor = []
 
     cfDates = DateUtils.GenerateCashFlowDates(swap.startDate, swap.endDate, "dummyForEndDateIsNotNone", valFreq)[1]
     epeTimes = len(cfDates)
@@ -19,12 +25,23 @@ def epeStruct(swap, discCurve, valFreq, volatility, simulationTimes):
     cfDatesTemp = [DateUtils.DateAddDelta(swap.startDate, 0, 0, i)
                    for i in range(1, 1 + DateUtils.DateDifferenceInDays(swap.startDate,swap.endDate))]
     epeTimesTemp = len(cfDatesTemp)
-    randomValuesTemp = misc_util.lhs(epeTimesTemp)
     timeVecTemp = [DateUtils.DateDifferenceInYears(loopDate, date) for date in cfDatesTemp]
+
+    # rateTemp är jpy, rateFRN är usd
     rateTemp = [discCurve.RateFromTime(timeVecTemp[i]) for i in range(epeTimesTemp)]
+    rateFRN = [ discCurveFRN.RateFromTime( timeVecTemp[ i ] ) for i in range( epeTimesTemp ) ]
+    rateFX = np.subtract(rateTemp, rateFRN)
 
 
-    indexPathTemp = misc_util.randomPath2(swap.Initial(), randomValuesTemp, rateTemp, volatility, timeVecTemp)
+    randomValuesTemp = misc_util.lhs( epeTimesTemp )
+    randomValuesFX = misc_util.lhs(epeTimesTemp)
+
+    #correlationMatrix = [[1, 0.7], [0.7, 1]]
+    [randomValuesTemp,randomValuesFX] = misc_util.cholesky(correlationMatrix, [randomValuesTemp, randomValuesFX])
+
+    rateWithDividend = np.subtract(rateTemp, 0.016)
+    indexPathTemp = misc_util.randomPath2(swap.Initial(), randomValuesTemp, rateWithDividend, volIndex, timeVecTemp)
+    fxPath = misc_util.randomPath2( fxJPYUSD, randomValuesFX, rateFX, volFX, timeVecTemp )
     cfIndex = []
     timeDiffFactor = (DateUtils.DateDifferenceInDays(swap.startDate, swap.cfDates[1][0]) / DateUtils.DateDifferenceInDays(swap.startDate, cfDates[0]) )
     for i in range(len(cfDatesTemp)):
@@ -41,7 +58,7 @@ def epeStruct(swap, discCurve, valFreq, volatility, simulationTimes):
             break
     #print("indexus", indexus)
     # -------------------------------------------------------------------------------------------
-    indexPath = misc_util.randomPath2(swap.Initial(), randomValues, rate, volatility, timeVec)
+    indexPath = misc_util.randomPath2(swap.Initial(), randomValues, rate, volIndex, timeVec)
 
     """valfreq = '12m' """
     yymmdd = [0, 0, 0]
@@ -62,22 +79,31 @@ def epeStruct(swap, discCurve, valFreq, volatility, simulationTimes):
             # Inledande definitioner och beräkningar
             loopDate = DateUtils.DateAddDelta( loopDate, yymmdd[0], yymmdd[1], yymmdd[2])
             days = DateUtils.DateDifferenceInDays(loopDate,swap.endDate)
-            dayDates = [DateUtils.DateAddDelta(loopDate, 0, 0, i) for i in range(days)]
+            dayDates = [DateUtils.DateAddDelta(loopDate, 0, 0, j) for j in range(days)]
             dailyTimeVec = [ DateUtils.DateDifferenceInYears( loopDate, date ) for date in dayDates ]
-            dailyRate = [discCurve.RateFromTime(dailyTimeVec[i]) for i in range(days)]
+            dailyTimeVec = np.add(dailyTimeVec, DateUtils.DateDifferenceInYears(swap.startDate,loopDate))
+            dailyRate = [discCurve.RateFromTime(dailyTimeVec[j]) for j in range(days)] # Är denna rätt tid på????
 
             innerPV = 0
+            innerPVLibor = 0
             isKnockIn = (min(indexPathTemp[0:cfIndex[i]])) < swap.knockInLevel
             #print("Min av indexpath [0, i]", min(indexPathTemp[0:cfIndex[i]]))
-
-            # Beräkna värdet i given tidpunkt
+            numOfKI = 0
+            # Beräkna värdet för struct ben i given tidpunkt
             for j in range(simulationTimes):
 
-                indexVec = misc_util.randomPath(indexPathTemp[cfIndex[i]], misc_util.lhs(days), dailyRate, volatility, 1.0/365)
-                pv = swap.PresentValue(indexVec, discCurve, isKnockIn, loopDate)
-                innerPV -= pv
+                #indexVec = misc_util.randomPath(indexPathTemp[cfIndex[i]], misc_util.lhs(days), dailyRate, volIndex, 1.0/365)
+                indexVec = misc_util.randomPath2(indexPathTemp[cfIndex[i]], misc_util.lhs(days), dailyRate, volIndex, dailyTimeVec)
+                [pvStruct, koDate, knockIN] = swap.PresentValue(indexVec, discCurve, isKnockIn, loopDate)
+                pvLibor = frn.PresentValue(discCurveFRN, forwardCurve, loopDate, koDate)
+                innerPV -= pvStruct
+                innerPVLibor += pvLibor
+                if knockIN:
+                    numOfKI += 1
 
-            pvVector.append(innerPV/simulationTimes/1e9)
+            #print( i, ":a månaden", numOfKI/simulationTimes*100, "%")
+            pvVector.append(innerPV / (simulationTimes * swap.nominal))
+            pvVectorLibor.append((fxPath[cfIndex[i]] * innerPVLibor) / (simulationTimes * swap.nominal))
 
             # Kolla om vi är utknockade
             #print("cfIndex[i]", cfIndex[i])
@@ -87,6 +113,7 @@ def epeStruct(swap, discCurve, valFreq, volatility, simulationTimes):
                 isKnockedOutAndDead = True
         else:
             pvVector.append( 0.0 )
+            pvVectorLibor.append(0.0)
 
     #print("PV vektor \n", pvVector)
 
@@ -100,6 +127,8 @@ def epeStruct(swap, discCurve, valFreq, volatility, simulationTimes):
     # # plt.axis([0, 36, 0.85, 1.3])
     # plt.plot([0, 3], [0.85, 0.85], 'g--')
     # plt.plot([i/365 for i in range(len(indexPathTemp))], np.divide(indexPathTemp, 18000))
+
+
     # ----------------------
     swapCFDates = swap.cfDates[1]
     yearBasis = [DateUtils.DateDifferenceInYears(swap.startDate, swapCFDates[i]) for i in range(len(swapCFDates))]
@@ -111,4 +140,8 @@ def epeStruct(swap, discCurve, valFreq, volatility, simulationTimes):
     # print("CF datum i dagar", dayBasis)
     # plt.plot(yearBasis, indexCF, 'bo')
     # plt.show()
-    return pvVector
+
+    returnIndex = np.divide(indexPathTemp, swap.Initial())
+    returnFX = np.divide(fxPath, fxJPYUSD)
+
+    return [pvVector, pvVectorLibor, returnIndex, returnFX, dayBasis, indexCF]

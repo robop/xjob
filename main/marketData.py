@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import DateUtils
 
 today = DateUtils.DateToday()
@@ -32,3 +33,11 @@ oisRatesJPY = [-0.024000111, -0.042666863, -0.0450004, -0.050479008, -0.05511567
              -0.077153031,  -0.084227856, -0.091289929, -0.098337368, -0.10438085, -0.110417947, -0.116453151,
              -0.119499762, -0.125523156, -0.125523156, -0.16019527, -0.181629865]
 oisRatesJPY = [0.01*libor for libor in oisRatesJPY]
+
+# Volatilities
+volPeriod = ["1m", "3m", "6m", "1y", "2y", "3y"]
+volJPYUSD = [8.62, 8.56, 9.04, 9.48, 9.68, 9.87]
+volJPYUSD = [0.01*vol for vol in volJPYUSD]
+volUSDSEK = [7.99, 7.89, 8.56, 8.97, 9.35, 9.62]
+volUSDSEK = [0.01*vol for vol in volUSDSEK]
+volNikkei = [0.1766, 0.1771, 0.1795, 0.1790, 0.1718, 0.1684]

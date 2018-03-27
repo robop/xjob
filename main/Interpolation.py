@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from math import exp, log
 
 def SolveTriDiagonal(a, b, c, r):

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import DateUtils
 import math
 import holidays
@@ -84,6 +85,7 @@ class structuredSwap:
         self.isKnockedIn = (min(indexVector) < self.knockInLevel) or isKnockIn
         self.isKnockedOut = False
         tempCFDates = self.cfDates
+        koDate = None
 
         # Kolla om refDate är senare än sista kassaflödet
         if refDate > tempCFDates[1][-1]:
@@ -109,6 +111,7 @@ class structuredSwap:
                     """We add the nominal cash flow to the position of 'index' """
                     self.cfs[i] += self.nominal
                     self.isKnockedOut = True
+                    koDate = tempCFDates[1][i]
                     self.koPos = i
                 elif i == len(tempCFDates[0]) - 1:
                     # Om vi är på sista kassaflödet och inte utknockade
@@ -128,7 +131,7 @@ class structuredSwap:
         # times = [ DateUtils.DateDifferenceInYears( refDate, date ) for date in dates ]
         # plt.plot(times, indexVector )
         # plt.show()
-        return self.pv
+        return [self.pv, koDate, self.isKnockedIn]
 
 
 # endDate = DateUtils.DateAddDatePeriod(today, "3Y")
