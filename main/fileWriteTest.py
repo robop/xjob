@@ -3,6 +3,8 @@ import numpy as np
 import shelve
 import monteCarloTest as mct
 import matplotlib.pyplot as plt
+from numba import jit
+
 
 def natt(simEPE, simPV, simThis):
     # Creates the shelve .db file if it doesn't exist
@@ -51,5 +53,5 @@ def dag():
 
     return 0
 
-natt(1000, 1000, 10)
+natt(1, 100, 1)
 #dag()

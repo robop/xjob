@@ -16,6 +16,7 @@ import Interpolation
 import FRN
 import matplotlib.patches as mpatches
 
+
 def mcTest(epeSimulations, structPVSimulations, correlation):
     import marketData
     # epeSimulations, structPVSimulations, correlation
@@ -104,27 +105,27 @@ def mcTest(epeSimulations, structPVSimulations, correlation):
         index = np.add(index, eeIndex)
         fx = np.add(fx, eeFX)
 
-        # plt.figure(1)
-        # plt.subplot(221)
-        # plt.plot((EEVEKTOR * -1), 'g')
-        # plt.plot(EEVEKTORLibor, 'r')
-        # red_patch = mpatches.Patch( color='red', label='Libor Leg' )
-        # ed_patch = mpatches.Patch( color='green', label='Struct Leg' )
-        # plt.legend( handles=[ red_patch, ed_patch ])
-        # plt.subplot(222)
-        # plt.plot(EPE, 'r')
-        # plt.plot(ENE, 'g')
-        # epe_patch = mpatches.Patch(color='red', label='EPE')
-        # ene_patch = mpatches.Patch( color='green', label='ENE' )
-        # plt.legend( handles=[epe_patch, ene_patch])
-        # plt.subplot( 212 )
-        # plt.plot(eeIndex, 'b')
-        # plt.plot(eeFX, 'k')
-        # plt.plot( dayBasis, indexCF, 'co' )
-        # index_patch = mpatches.Patch(color='blue', label='Nikkei225')
-        # fx_patch = mpatches.Patch(color='k', label='USD/JPY')
-        # plt.legend(handles=[index_patch, fx_patch])
-        # plt.show()
+        plt.figure(1)
+        plt.subplot(221)
+        plt.plot((EEVEKTOR), 'g')
+        plt.plot(EEVEKTORLibor * -1, 'r') # Så vi får den kring 1 istället för -1
+        red_patch = mpatches.Patch( color='red', label='Libor Leg' )
+        ed_patch = mpatches.Patch( color='green', label='Struct Leg' )
+        plt.legend( handles=[ red_patch, ed_patch ])
+        plt.subplot(222)
+        plt.plot(EPE, 'r')
+        plt.plot(ENE, 'g')
+        epe_patch = mpatches.Patch(color='red', label='EPE')
+        ene_patch = mpatches.Patch( color='green', label='ENE' )
+        plt.legend( handles=[epe_patch, ene_patch])
+        plt.subplot( 212 )
+        plt.plot(eeIndex, 'b')
+        plt.plot(eeFX, 'k')
+        plt.plot( dayBasis, indexCF, 'co' )
+        index_patch = mpatches.Patch(color='blue', label='Nikkei225')
+        fx_patch = mpatches.Patch(color='k', label='USD/JPY')
+        plt.legend(handles=[index_patch, fx_patch])
+        plt.show()
 
 
     EEVEKTOR = np.divide(EEVEKTOR, nSim)

@@ -4,12 +4,15 @@ import DateUtils
 import matplotlib.pyplot as plt
 import numpy as np
 import FRN
+from numba import jit
+
 
 def epeStruct(swap, discCurve, discCurveFRN, forwardCurve, spread, valFreq, volIndex, volFX, simulationTimes, correlationMatrix):
     # swap = structSwap objekt, discCurve = diskontering objekt, valFreq = [år, mån, dagar]
     fxJPYUSD = 0.00943
-    fxNominal = swap.nominal / fxJPYUSD
-    frn = FRN.frn(fxNominal, swap.startDate, swap.endDate, spread, swap.frequency, swap.currency)
+    fxUSDJPY = 1/fxJPYUSD
+    frnLiborNominal = swap.nominal * fxJPYUSD
+    frn = FRN.frn(frnLiborNominal, swap.startDate, swap.endDate, spread, swap.frequency, swap.currency)
 
     loopDate = swap.startDate
     pvVector = []
@@ -41,7 +44,7 @@ def epeStruct(swap, discCurve, discCurveFRN, forwardCurve, spread, valFreq, volI
 
     rateWithDividend = np.subtract(rateTemp, 0.016)
     indexPathTemp = misc_util.randomPath2(swap.Initial(), randomValuesTemp, rateWithDividend, volIndex, timeVecTemp)
-    fxPath = misc_util.randomPath2( fxJPYUSD, randomValuesFX, rateFX, volFX, timeVecTemp )
+    fxPathUSDJPY = misc_util.randomPath2( fxUSDJPY, randomValuesFX, rateFX, volFX, timeVecTemp )
     cfIndex = []
     timeDiffFactor = (DateUtils.DateDifferenceInDays(swap.startDate, swap.cfDates[1][0]) / DateUtils.DateDifferenceInDays(swap.startDate, cfDates[0]) )
     for i in range(len(cfDatesTemp)):
@@ -83,12 +86,12 @@ def epeStruct(swap, discCurve, discCurveFRN, forwardCurve, spread, valFreq, volI
             dailyTimeVec = [ DateUtils.DateDifferenceInYears( loopDate, date ) for date in dayDates ]
             dailyTimeVec = np.add(dailyTimeVec, DateUtils.DateDifferenceInYears(swap.startDate,loopDate))
             dailyRate = [discCurve.RateFromTime(dailyTimeVec[j]) for j in range(days)] # Är denna rätt tid på????
-
+            print(loopDate, "Index:", indexPathTemp[cfIndex[i]])
             innerPV = 0
             innerPVLibor = 0
             isKnockIn = (min(indexPathTemp[0:cfIndex[i]])) < swap.knockInLevel
             #print("Min av indexpath [0, i]", min(indexPathTemp[0:cfIndex[i]]))
-            numOfKI = 0
+            numOfKO = 0
             # Beräkna värdet för struct ben i given tidpunkt
             for j in range(simulationTimes):
 
@@ -96,14 +99,18 @@ def epeStruct(swap, discCurve, discCurveFRN, forwardCurve, spread, valFreq, volI
                 indexVec = misc_util.randomPath2(indexPathTemp[cfIndex[i]], misc_util.lhs(days), dailyRate, volIndex, dailyTimeVec)
                 [pvStruct, koDate, knockIN] = swap.PresentValue(indexVec, discCurve, isKnockIn, loopDate)
                 pvLibor = frn.PresentValue(discCurveFRN, forwardCurve, loopDate, koDate)
-                innerPV -= pvStruct
-                innerPVLibor += pvLibor
+                # Har ändrat + och -
+                innerPV += pvStruct
+                innerPVLibor -= pvLibor
+                if indexVec[0] >= 18900 and i % 3 == 0:
+                    print(pvStruct/1e9)
                 if knockIN:
-                    numOfKI += 1
+                    numOfKO += 1
 
-            #print( i, ":a månaden", numOfKI/simulationTimes*100, "%")
-            pvVector.append(innerPV / (simulationTimes * swap.nominal))
-            pvVectorLibor.append((fxPath[cfIndex[i]] * innerPVLibor) / (simulationTimes * swap.nominal))
+
+            pvVector.append(innerPV / (fxPathUSDJPY[cfIndex[i]] * simulationTimes)) # 0 PGA normering med nominellt i jpy
+            print( i+1, "månad", numOfKO / simulationTimes * 100, "%", pvVector[ i ] * fxPathUSDJPY[cfIndex[i]] )
+            pvVectorLibor.append((innerPVLibor) / (simulationTimes))
 
             # Kolla om vi är utknockade
             #print("cfIndex[i]", cfIndex[i])
@@ -142,6 +149,6 @@ def epeStruct(swap, discCurve, discCurveFRN, forwardCurve, spread, valFreq, volI
     # plt.show()
 
     returnIndex = np.divide(indexPathTemp, swap.Initial())
-    returnFX = np.divide(fxPath, fxJPYUSD)
+    returnFX = np.divide(fxPathUSDJPY, fxUSDJPY)
 
     return [pvVector, pvVectorLibor, returnIndex, returnFX, dayBasis, indexCF]

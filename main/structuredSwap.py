@@ -98,7 +98,7 @@ class structuredSwap:
         for i in range(len(tempCFDates[0])):
             cfIndex = DateUtils.DateDifferenceInDays(refDate, tempCFDates[1][i])
             dt = DateUtils.DateDifferenceInYears(tempCFDates[0][i], tempCFDates[1][i])
-            df = discountCurve.DiscountFromDate(tempCFDates[1][i])
+            df = discountCurve.DiscountFromDate(tempCFDates[1][i], refDate)
             St = indexVector[cfIndex]
 
             if not self.isKnockedOut:
@@ -111,6 +111,7 @@ class structuredSwap:
                     """We add the nominal cash flow to the position of 'index' """
                     self.cfs[i] += self.nominal
                     self.isKnockedOut = True
+                    #print("DF vid KO", df)
                     koDate = tempCFDates[1][i]
                     self.koPos = i
                 elif i == len(tempCFDates[0]) - 1:
@@ -131,7 +132,7 @@ class structuredSwap:
         # times = [ DateUtils.DateDifferenceInYears( refDate, date ) for date in dates ]
         # plt.plot(times, indexVector )
         # plt.show()
-        return [self.pv, koDate, self.isKnockedIn]
+        return [self.pv, koDate, self.isKnockedOut]
 
 
 # endDate = DateUtils.DateAddDatePeriod(today, "3Y")

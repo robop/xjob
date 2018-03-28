@@ -52,9 +52,22 @@ class Dcurve:
             timePoint = DateUtils.GetPeriodLength(self.refDate, date, self.dayCount)[1]
             self.points.append(timePoint)
 
-    def DiscountFromDate(self, date):
-        T = DateUtils.GetPeriodLength( self.refDate, date, self.dayCount )[ 1 ]
-        return self.DiscountFromTime( T )
+    def DiscountFromDate(self, date, refDate = None):
+        if refDate:
+            T1 = DateUtils.GetPeriodLength(self.refDate, refDate, self.dayCount)[1]
+            T2 = DateUtils.GetPeriodLength( self.refDate, date, self.dayCount )[ 1 ]
+
+            DF1 = self.DiscountFromTime(T1)
+            DF2 = self.DiscountFromTime( T2 )
+
+            if DF2/DF1 == 1:
+                print("IT'S A-HAPPENING!!!!")
+
+            return DF2/DF1
+        else:
+            T = DateUtils.GetPeriodLength( self.refDate, date, self.dayCount )[ 1 ]
+            return self.DiscountFromTime( T )
+
 
     def DiscountFromTime(self, point):
         rateDiscount = self.inter(point, self.points, self.rates, self.extra, self.extra)
